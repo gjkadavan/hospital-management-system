@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pharmacy - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- READ-ONLY / PLACEHOLDER CARD -->
+  <div class="card">
+    <h2>Pharmacy Inventory</h2>
+    <p class="small">
+      Pharmacy inventory tracking is restricted to <b>Pharmacy</b> and <b>Admin</b> roles.
+      This page will display drug stock levels, reorder thresholds, and last-updated
+      timestamps once the <code>/api/pharmacy</code> endpoints are added to the backend.
+    </p>
+
+    <p class="small">
+      For now:
+      <ul class="small">
+        <li>Only <b>Pharmacy</b> and <b>Admin</b> should be able to change stock.</li>
+        <li>Staff / Doctor / Patient should not see internal stock counts.</li>
+        <li>Billing for medication is handled in <a href="billing.html">Billing</a>, not here.</li>
+      </ul>
+    </p>
+
+    <div id="phAccessNote" class="notice small"></div>
+
+    <table id="phTable" style="margin-top:1rem;">
+      <thead>
+        <tr>
+          <th>Drug</th>
+          <th>Stock</th>
+          <th>Reorder @</th>
+          <th>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody id="phTableBody">
+        <tr>
+          <td colspan="4" class="notice">
+            Inventory data not yet connected to backend.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FUTURE WRITE FORM (DISABLED FOR NOW) -->
+  <div class="card">
+    <h2>Update / Add Drug <span class="notice">(Pharmacy / Admin only)</span></h2>
+    <div class="small">
+      This action will require:
+      <ul class="small">
+        <li>Login</li>
+        <li>Role = Pharmacy or Admin</li>
+        <li>Valid CSRF token</li>
+      </ul>
+      The POST /api/pharmacy route is not implemented yet in backend/api.py,
+      so this form is disabled for now.
+    </div>
+
+    <div class="form-grid">
+      <label>Drug Name
+        <input id="phName" disabled placeholder="amoxicillin 500mg">
+      </label>
+      <label>Stock
+        <input id="phStock" placeholder="20" disabled>
+      </label>
+      <label>Reorder Level
+        <input id="phReorder" placeholder="5" disabled>
+      </label>
+    </div>
+    <button class="btn" id="phSaveBtn" disabled>Save Stock</button>
+
+    <div id="phMsg" class="hidden"></div>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+(async function init(){
+  // Require login for this page
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  // Front-end only note to user about access.
+  // (Real enforcement will be server-side once /api/pharmacy exists.)
+  const note = document.getElementById("phAccessNote");
+  if (user.role === "Pharmacy" || user.role === "Admin") {
+    note.textContent = "You have pharmacy/admin privileges. Stock editing will be enabled once the API is added.";
+  } else {
+    note.textContent = "You do not have pharmacy/admin privileges. Inventory is read-only / unavailable to your role.";
+  }
+})();
+</script>
+</body>
+</html>

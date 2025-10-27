@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HMS Dashboard</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="flex-row">
+    <div class="flex-col">
+      <div class="card">
+        <h2>Upcoming Appointments</h2>
+        <table id="apptTable">
+          <thead>
+            <tr>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>When</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="apptNotice" class="notice small"></div>
+      </div>
+    </div>
+
+    <!-- Removed pharmacy stock card for now because backend has no /api/pharmacy -->
+    <div class="flex-col">
+      <div class="card">
+        <h2>System Info</h2>
+        <p class="small">
+          This dashboard shows appointments relevant to your role and your
+          unread notifications. Pharmacy inventory view was removed here
+          because it's not implemented in the backend API.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex-row">
+    <div class="flex-col">
+      <div class="card">
+        <h2>Your Notifications</h2>
+        <table id="notifTable">
+          <thead>
+            <tr>
+              <th>Message</th>
+              <th>Read?</th>
+              <th>When</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+async function loadAppointmentsForUser(user) {
+  const tableBody = document.querySelector("#apptTable tbody");
+  const notice = document.querySelector("#apptNotice");
+  tableBody.innerHTML = "";
+  notice.textContent = "";
+
+  // Pharmacy role has no appointment visibility in backend
+  if (user.role === "Pharmacy") {
+    notice.textContent = "(Pharmacy users cannot view appointments)";
+    return;
+  }
+
+  // We'll call GET /api/appointments/<doctor_id>
+  // For Admin/Staff/Doctor: doctor_id is the selected doctor (we'll just use this user's id if Doctor)
+  // For Patient: backend will filter to their own appointments automatically
+  //
+  // Strategy:
+  // - If you're a Doctor, ask for your own schedule.
+  // - Else, still query using your user.id (Admin/Staff can see any doc;
+  //   Patient view will be filtered).
+  const doctorIdToQuery = user.id;
+
+  const { data } = await apiGet(`/api/appointments/${encodeURIComponent(doctorIdToQuery)}`);
+  if (!data || !data.ok) {
+    notice.textContent = "No appointment data or not authorized.";
+    return;
+  }
+
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  const appts = data.appointments.slice(0, 5);
+  if (appts.length === 0) {
+    notice.textContent = "No upcoming appointments.";
+    return;
+  }
+
+  appts.forEach(row => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(row.patient_name || "")}</td>
+      <td>${escapeHTML(row.doctor_name || "")}</td>
+      <td>${escapeHTML(row.start_time || "")}</td>
+      <td>${escapeHTML(row.status || "")}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+}
+
+async function loadNotifications() {
+  const tableBody = document.querySelector("#notifTable tbody");
+  tableBody.innerHTML = "";
+
+  const { data } = await apiGet("/api/notifications");
+  if (!data || !data.ok) {
+    return;
+  }
+
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  // data.notifications: [{id, message, is_read, created_at}, ...]
+  data.notifications.slice(0, 5).forEach(n => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(n.message)}</td>
+      <td>${n.is_read ? "yes" : "no"}</td>
+      <td>${escapeHTML(n.created_at)}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+}
+
+(async function init() {
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  await loadAppointmentsForUser(user);
+  await loadNotifications();
+})();
+</script>
+</body>
+</html>

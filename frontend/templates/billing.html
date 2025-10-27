@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Billing - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- CREATE BILLING ENTRY (Admin / Pharmacy only) -->
+  <div class="card">
+    <h2>Create Invoice / Bill</h2>
+    <div id="bMsg" class="hidden"></div>
+
+    <div class="form-grid">
+      <label>Patient ID
+        <input id="bPatient" placeholder="1">
+      </label>
+
+      <label>Amount
+        <input id="bAmt" placeholder="100.00">
+      </label>
+
+      <label style="grid-column:1/-1">Description
+        <textarea id="bDesc" rows="2" placeholder="Medication charges, lab work, etc."></textarea>
+      </label>
+    </div>
+
+    <button class="btn" id="bCreateBtn">Create Invoice</button>
+  </div>
+
+  <!-- VIEW BILLING FOR A PATIENT -->
+  <div class="card">
+    <h2>Patient Billing</h2>
+    <div class="form-grid">
+      <label>Patient ID
+        <input id="bPatientQuery" placeholder="1">
+      </label>
+    </div>
+    <button class="btn" id="bLoadBtn">Load Billing</button>
+
+    <table id="bTable" style="margin-top:1rem;">
+      <thead>
+        <tr>
+          <th>Bill ID</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Description</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+function statusClass(statusVal) {
+  // map backend status -> css class for color
+  // backend status can be 'unpaid','paid','void'
+  if (statusVal === "unpaid") return "badge-danger";
+  if (statusVal === "paid") return "badge-ok";
+  return "badge-warn"; // 'void' or anything else
+}
+
+async function loadBilling() {
+  const pid = document.querySelector("#bPatientQuery").value.trim();
+  if (!pid) return;
+
+  const {data} = await apiGet(`/api/billing/${encodeURIComponent(pid)}`);
+  if (!data || !data.ok) return;
+
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  const body = document.querySelector("#bTable tbody");
+  body.innerHTML = "";
+
+  data.billing.forEach(b => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(String(b.id))}</td>
+      <td>$${escapeHTML(String(b.amount))}</td>
+      <td class="${statusClass(b.status)}">${escapeHTML(b.status)}</td>
+      <td>${escapeHTML(b.description || "")}</td>
+      <td>${escapeHTML(b.created_at)}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+async function createInvoice() {
+  const patient_id = document.querySelector("#bPatient").value.trim();
+  const amount = document.querySelector("#bAmt").value.trim();
+  const description = document.querySelector("#bDesc").value.trim();
+
+  const payload = {
+    patient_id,
+    amount,
+    description
+  };
+
+  const {data} = await apiPost("/api/billing", payload);
+
+  const msg = document.querySelector("#bMsg");
+  msg.classList.remove("hidden", "error-box", "success-box");
+
+  if (!data || !data.ok) {
+    msg.classList.add("error-box");
+    msg.textContent = (data && data.error) ? data.error : "Failed to create invoice";
+  } else {
+    msg.classList.add("success-box");
+    msg.textContent = "Invoice created. ID " + data.bill_id;
+
+    // clear form
+    document.querySelector("#bPatient").value = "";
+    document.querySelector("#bAmt").value = "";
+    document.querySelector("#bDesc").value = "";
+  }
+}
+
+// page init
+(async function init(){
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  // hook logout + buttons
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  document.querySelector("#bLoadBtn").addEventListener("click", loadBilling);
+  document.querySelector("#bCreateBtn").addEventListener("click", createInvoice);
+})();
+</script>
+</body>
+</html>

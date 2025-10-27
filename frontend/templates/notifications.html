@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Notifications - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="card">
+    <h2>Your Notifications</h2>
+    <table id="nTable">
+      <thead>
+        <tr>
+          <th>Message</th>
+          <th>Read?</th>
+          <th>When</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+async function loadNotifications(){
+  const { status, data } = await apiGet("/api/notifications");
+  if (!data || !data.ok) {
+    return;
+  }
+
+  // refresh CSRF token if backend rotated it
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  const body = document.querySelector("#nTable tbody");
+  body.innerHTML = "";
+
+  // backend returns: notifications = [{id, message, is_read, created_at}, ...]
+  data.notifications.forEach(n => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(n.message)}</td>
+      <td>${n.is_read ? "yes" : "no"}</td>
+      <td>${escapeHTML(n.created_at)}</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+(async function init(){
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  await loadNotifications();
+})();
+</script>
+</body>
+</html>

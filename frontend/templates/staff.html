@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Staff - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- ROLE OVERVIEW / RBAC DOC CARD -->
+  <div class="card">
+    <h2>System Roles & Access Control</h2>
+    <p class="small">
+      These are the roles enforced by the backend. All protected routes check both:
+      <code>require_login_and_csrf()</code> and allowed roles.
+    </p>
+    <table class="rbacTable">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Can Do</th>
+          <th>Cannot Do</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>Admin</b></td>
+          <td>
+            Full access. Create billing, view all patients, view prescriptions,
+            access appointments, future pharmacy stock management.
+          </td>
+          <td>
+            N/A (root role).
+          </td>
+        </tr>
+        <tr>
+          <td><b>Staff</b></td>
+          <td>
+            Register patients, schedule appointments on behalf of patients,
+            view patient charts (non-redacted).
+          </td>
+          <td>
+            Cannot create prescriptions (Doctor only),
+            cannot do pharmacy stock edits.
+          </td>
+        </tr>
+        <tr>
+          <td><b>Doctor</b></td>
+          <td>
+            View patients, view appointments, create prescriptions
+            using <code>POST /api/prescriptions</code>.
+          </td>
+          <td>
+            Cannot create invoices/billing,
+            cannot edit pharmacy stock.
+          </td>
+        </tr>
+        <tr>
+          <td><b>Pharmacy</b></td>
+          <td>
+            View prescriptions for fulfillment.
+            Create billing entries (medication charges) using
+            <code>POST /api/billing</code>.
+          </td>
+          <td>
+            Sees redacted patient medical_history.
+            Cannot schedule appointments.
+          </td>
+        </tr>
+        <tr>
+          <td><b>Patient</b></td>
+          <td>
+            Can book their own appointment,
+            view their own chart and billing,
+            view their own prescriptions.
+          </td>
+          <td>
+            Cannot see other patients' data.
+            Cannot create billing or prescriptions.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- USER MANAGEMENT PLACEHOLDER -->
+  <div class="card">
+    <h2>Add Staff / Doctor <span class="notice">(Admin only)</span></h2>
+    <p class="small">
+      User onboarding will be implemented as an Admin-only feature.
+      Admins will be able to create new accounts with roles
+      (<code>Admin</code>, <code>Doctor</code>, <code>Staff</code>, <code>Pharmacy</code>, <code>Patient</code>)
+      and secure hashed passwords.
+    </p>
+    <p class="small">
+      The backend does <b>not</b> currently expose an
+      <code>/api/staff</code> POST route, so this form is disabled.
+      Password handling must use secure hashing on the server
+      (<code>werkzeug.security.generate_password_hash</code>)
+      and CSRF + RBAC checks (Admin only).
+    </p>
+
+    <div id="sMsg" class="hidden"></div>
+
+    <div class="form-grid">
+      <label>Username
+        <input id="sUser" disabled placeholder="dr.jones">
+      </label>
+      <label>Password
+        <input id="sPass" type="password" disabled placeholder="temporary password">
+      </label>
+      <label>Role
+        <select id="sRole" disabled>
+          <option value="Doctor">Doctor</option>
+          <option value="Staff">Staff</option>
+          <option value="Admin">Admin</option>
+          <option value="Pharmacy">Pharmacy</option>
+          <option value="Patient">Patient</option>
+        </select>
+      </label>
+    </div>
+
+    <button class="btn" id="sAddBtn" disabled>Add Staff</button>
+    <p class="notice small" style="margin-top:0.5rem;">
+      (Disabled until secure admin-only create-user API is added.)
+    </p>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+(async function init(){
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  // No network calls here, because /api/staff doesn't exist in backend/api.py.
+})();
+</script>
+</body>
+</html>

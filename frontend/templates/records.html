@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Records - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- VIEW PRESCRIPTIONS / CLINICAL NOTES -->
+  <div class="card">
+    <h2>View Patient Clinical Records</h2>
+    <p class="small">
+      This view pulls prescription records for a given patient.
+      Access is role-restricted:
+      <ul class="small">
+        <li><b>Doctor / Admin / Staff / Pharmacy</b>: can view any patient’s prescriptions.</li>
+        <li><b>Patient</b>: can only view their own prescriptions.</li>
+      </ul>
+    </p>
+
+    <div class="form-grid">
+      <label>Patient ID
+        <input id="rPatientId" placeholder="1">
+      </label>
+    </div>
+    <button class="btn" id="rLoadBtn">Load Prescriptions</button>
+
+    <table id="rTable" style="margin-top:1rem;">
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Doctor ID</th>
+          <th>Medication</th>
+          <th>Instructions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="rMsg" class="hidden"></div>
+  </div>
+
+  <!-- WRITE SECTION (DISABLED) -->
+  <div class="card">
+    <h2>Add Clinical Record <span class="notice">(Doctor only)</span></h2>
+    <p class="small">
+      In the backend, new clinical data gets created when a Doctor finishes an appointment:
+      the Doctor calls <code>POST /api/prescriptions</code> with
+      (<code>appointment_id</code>, <code>patient_id</code>,
+      <code>medication</code>, <code>instructions</code>).
+    </p>
+    <p class="small">
+      That route enforces:
+      <ul class="small">
+        <li>You must be logged in with role = <b>Doctor</b>.</li>
+        <li>The appointment must exist and belong to you and that patient.</li>
+        <li>CSRF token must be valid.</li>
+      </ul>
+    </p>
+    <p class="small">
+      Because that workflow is tied to closing an appointment,
+      direct free-form record entry is disabled in this UI.
+    </p>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+async function loadPrescriptions() {
+  const pid = document.querySelector("#rPatientId").value.trim();
+  if (!pid) return;
+
+  const { data } = await apiGet(`/api/prescriptions/${encodeURIComponent(pid)}`);
+  const body = document.querySelector("#rTable tbody");
+  const msg = document.querySelector("#rMsg");
+
+  body.innerHTML = "";
+  msg.classList.remove("hidden","error-box","success-box");
+  msg.textContent = "";
+
+  if (!data || !data.ok) {
+    // show error message / forbidden / etc
+    msg.classList.add("error-box");
+    msg.textContent = data && data.error
+      ? data.error
+      : "Unable to load prescriptions (forbidden or not found).";
+    return;
+  }
+
+  // backend may rotate csrf_token
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  // data.prescriptions = [
+  //   { id, appointment_id, doctor_id, patient_id,
+  //     medication, instructions, created_at }
+  // ]
+  if (!data.prescriptions.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td colspan="4" class="notice">No prescriptions found for this patient.</td>
+    `;
+    body.appendChild(tr);
+    return;
+  }
+
+  data.prescriptions.forEach(rec => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHTML(rec.created_at || "")}</td>
+      <td>${escapeHTML(String(rec.doctor_id || ""))}</td>
+      <td>${escapeHTML(rec.medication || "")}</td>
+      <td>${escapeHTML(rec.instructions || "")}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  msg.classList.add("success-box");
+  msg.textContent = "Loaded " + data.prescriptions.length + " record(s).";
+}
+
+(async function init(){
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  document.querySelector("#rLoadBtn").addEventListener("click", loadPrescriptions);
+})();
+</script>
+</body>
+</html>

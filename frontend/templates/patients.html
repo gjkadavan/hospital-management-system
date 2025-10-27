@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Patients - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- CREATE / REGISTER A NEW PATIENT -->
+  <div class="card">
+    <h2>Register New Patient <span class="notice">(Admin / Staff only)</span></h2>
+    <div id="pMsg" class="hidden"></div>
+
+    <div class="form-grid">
+      <label>First Name
+        <input id="pFirst">
+      </label>
+      <label>Last Name
+        <input id="pLast">
+      </label>
+      <label>Date of Birth
+        <input id="pDob" type="date">
+      </label>
+      <label>Phone
+        <input id="pPhone" placeholder="+1 555-123-4567">
+      </label>
+      <label style="grid-column:1/-1">Medical History
+        <textarea id="pHistory" rows="3" placeholder="Allergies, conditions, etc."></textarea>
+      </label>
+    </div>
+
+    <button class="btn" id="pAddBtn">Add Patient</button>
+  </div>
+
+  <!-- LOOK UP AN EXISTING PATIENT -->
+  <div class="card">
+    <h2>Lookup Patient By ID</h2>
+
+    <div class="form-grid">
+      <label>Patient ID
+        <input id="pLookupId" placeholder="e.g. 1">
+      </label>
+    </div>
+    <button class="btn" id="pLookupBtn">Fetch Patient</button>
+
+    <table id="pTable" style="margin-top:1rem;">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>DOB</th>
+          <th>Phone</th>
+          <th>History</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script src="static/js/utils.js"></script>
+<script>
+// Create a new patient (Admin/Staff only on the backend)
+async function addPatient() {
+  const payload = {
+    first_name: document.querySelector("#pFirst").value.trim(),
+    last_name: document.querySelector("#pLast").value.trim(),
+    dob: document.querySelector("#pDob").value,
+    phone: document.querySelector("#pPhone").value.trim(),
+    medical_history: document.querySelector("#pHistory").value.trim()
+  };
+
+  const { data } = await apiPost("/api/patients", payload);
+
+  const box = document.getElementById("pMsg");
+  box.classList.remove("hidden","error-box","success-box");
+
+  if (!data || !data.ok) {
+    box.classList.add("error-box");
+    box.textContent = data && data.error ? data.error : "Failed to add (requires Admin/Staff role)";
+  } else {
+    box.classList.add("success-box");
+    box.textContent = "Patient added with ID " + data.patient_id;
+
+    // clear form
+    document.querySelector("#pFirst").value = "";
+    document.querySelector("#pLast").value = "";
+    document.querySelector("#pDob").value = "";
+    document.querySelector("#pPhone").value = "";
+    document.querySelector("#pHistory").value = "";
+  }
+}
+
+// Fetch a single patient by ID with proper privacy rules
+async function fetchPatientById() {
+  const pid = document.querySelector("#pLookupId").value.trim();
+  if (!pid) return;
+
+  const { data } = await apiGet(`/api/patients/${encodeURIComponent(pid)}`);
+  const body = document.querySelector("#pTable tbody");
+  body.innerHTML = "";
+
+  if (!data || !data.ok) {
+    // show nothing if forbidden or not found
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td colspan="4" class="notice">
+        ${data && data.error ? escapeHTML(data.error) : "No record / not allowed"}
+      </td>`;
+    body.appendChild(tr);
+    return;
+  }
+
+  // refresh CSRF token if backend included one
+  if (data.csrf_token) {
+    CSRF_TOKEN = data.csrf_token;
+  }
+
+  const p = data.patient; // { first_name, last_name, dob, phone, medical_history, ... }
+
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${escapeHTML((p.first_name || "") + " " + (p.last_name || ""))}</td>
+    <td>${escapeHTML(p.dob || "")}</td>
+    <td>${escapeHTML(p.phone || "")}</td>
+    <td>${escapeHTML(p.medical_history || "")}</td>
+  `;
+  body.appendChild(tr);
+}
+
+(async function init(){
+  const user = await ensureAuthOrRedirect();
+  if (!user) return;
+
+  if (typeof wireLogoutBtn === "function") {
+    wireLogoutBtn();
+  }
+
+  document.querySelector("#pAddBtn").addEventListener("click", addPatient);
+  document.querySelector("#pLookupBtn").addEventListener("click", fetchPatientById);
+})();
+</script>
+</body>
+</html>

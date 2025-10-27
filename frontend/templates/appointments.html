@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Appointments - HMS</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+<div class="navbar">
+  <div class="nav-left">
+    <div class="nav-title">HMS Dashboard</div>
+    <a class="nav-link" href="dashboard.html">Home</a>
+    <a class="nav-link" href="patients.html">Patients</a>
+    <a class="nav-link" href="appointments.html">Appointments</a>
+    <a class="nav-link" href="staff.html">Staff</a>
+    <a class="nav-link" href="records.html">Records</a>
+    <a class="nav-link" href="billing.html">Billing</a>
+    <a class="nav-link" href="pharmacy.html">Pharmacy</a>
+    <a class="nav-link" href="notifications.html">Notifications</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn small danger" id="logoutBtn">Logout</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ========== Book Appointment Card ========== -->
+  <div class="card">
+    <h2>Book Appointment</h2>
+    <div id="aMsg" class="hidden"></div>
+    <div class="form-grid">
+      <label>Patient ID
+        <input id="aPatientId" placeholder="1">
+      </label>
+      <label>Doctor ID
+        <input id="aDoctorId" placeholder="2">
+      </label>
+      <label>Date &amp; Time
+        <!-- We'll accept datetime-local (which gives 2025-10-24T14:30)
+             and convert it to "2025-10-24 14:30" before sending -->
+        <input id="aWhen" type="datetime-local">
+      </label>
+      <label style="grid-column:1/-1">Reason / Notes
+        <textarea id="aNotes" rows="2"></textarea>
+      </label>
+    </div>
+    <button class="btn" id="aBookBtn">Book</button>
+  </div>
+
+  <!-- ========== View Appointments Card ========== -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <h

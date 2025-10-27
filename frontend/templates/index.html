@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HMS Login</title>
+<link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+<div class="page" style="max-width:400px;">
+  <div class="card">
+    <h2>
+      Login
+      <span class="notice">
+        demo: admin/admin123 · drsmith/doctor123 · reception/staff123
+      </span>
+    </h2>
+
+    <div id="loginError" class="error-box hidden"></div>
+
+    <label>
+      Username
+      <input type="text" id="username" autocomplete="username">
+    </label>
+    <label>
+      Password
+      <input type="password" id="password" autocomplete="current-password">
+    </label>
+    <button class="btn" id="loginBtn">Sign In</button>
+  </div>
+</div>
+
+<script src="static/js/api.js"></script>
+<script src="static/js/auth.js"></script>
+<script>
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const u = document.getElementById("username").value.trim();
+  const p = document.getElementById("password").value.trim();
+
+  const { status, data } = await doLogin(u, p);
+
+  if (!data || !data.ok) {
+    const box = document.getElementById("loginError");
+    box.classList.remove("hidden");
+    box.textContent = (data && data.error) ? data.error : "Login failed";
+  } else {
+    // capture CSRF token from login response for immediate use
+    if (data.csrf_token) {
+      CSRF_TOKEN = data.csrf_token;
+    }
+    window.location.href = "dashboard.html";
+  }
+});
+</script>
+</body>
+</html>

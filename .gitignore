@@ -1,0 +1,54 @@
+# -------------------------
+# Python bytecode / cache
+# -------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# pytest cache
+.pytest_cache/
+.cache/
+
+# Coverage / test reports
+*.coverage
+.coverage
+htmlcov/
+
+# -------------------------
+# Virtual environments
+# -------------------------
+venv/
+
+# -------------------------
+# Environment / secrets
+# -------------------------
+.env
+
+# -------------------------
+# SQLite / local data files
+# -------------------------
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# -------------------------
+# Build / dist artifacts
+# -------------------------
+dist/
+build/
+*.egg-info/
+
+# -------------------------
+# OS / editor noise
+# -------------------------
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# -------------------------
+# Screenshots / selenium outputs / manual run junk
+# -------------------------
+screenshots/
